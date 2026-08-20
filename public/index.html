@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hoolulu Firewall · Firecrawl Bot</title>
+<style>
+  :root {
+    --bg: #070b14;
+    --panel: rgba(20, 28, 48, 0.62);
+    --panel-solid: #101827;
+    --stroke: rgba(120, 160, 255, 0.18);
+    --text: #eaf1ff;
+    --muted: #93a3c4;
+    --accent: #5b8cff;
+    --accent2: #8f5bff;
+    --accent3: #22d3ee;
+    --ok: #34d399;
+    --err: #f87171;
+    --radius: 18px;
+    --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: var(--font);
+    color: var(--text);
+    background: var(--bg);
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Animated aurora background */
+  .aurora {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(900px 600px at 12% -10%, rgba(91,140,255,.28), transparent 60%),
+      radial-gradient(800px 600px at 88% 8%, rgba(143,91,255,.22), transparent 60%),
+      radial-gradient(700px 700px at 50% 110%, rgba(34,211,238,.12), transparent 60%);
+    filter: blur(20px);
+    animation: drift 22s ease-in-out infinite;
+  }
+  @keyframes drift {
+    0%,100% { transform: translate(0,0) scale(1); }
+    50%     { transform: translate(-30px,20px) scale(1.06); }
+  }
+
+  .grain {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    opacity: .04;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* Top bar */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .logo {
+    width: 46px; height: 46px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 20px;
+    box-shadow: 0 8px 30px rgba(91,140,255,.4);
+  }
+  .brand h1 { margin: 0; font-size: 22px; letter-spacing: -.02em; }
+  .brand p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+
+  .status-pill {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--panel);
+    border: 1px solid var(--stroke);
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-size: 13px;
+    backdrop-filter: blur(12px);
+  }
+  .dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 0 0 rgba(52,211,153,.6);
+    animation: pulse 2s infinite;
+  }
+  .dot.off { background: var(--err); animation: none; }
+  @keyframes pulse {
+    0%{ box-shadow:0 0 0 0 rgba(52,211,153,.6);}
+    70%{ box-shadow:0 0 0 8px rgba(52,211,153,0);}
+    100%{ box-shadow:0 0 0 0 rgba(52,211,153,0);}
+  }
+
+  /* Hero */
+  .hero { margin-bottom: 28px; }
+  .hero h2 { font-size: 34px; line-height: 1.15; margin: 0 0 10px; letter-spacing: -.03em;
+    background: linear-gradient(100deg, #fff, #bcd0ff, #c3a4ff, #a5f3fc);
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p { color: var(--muted); max-width: 640px; margin: 0; line-height: 1.6; }
+
+  /* Panels */
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius);
+    padding: 20px;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 20px 50px rgba(0,0,0,.35);
+  }
+  .grid { display: grid; gap: 18px; }
+  .grid.two { grid-template-columns: 1.4fr 1fr; }
+  @media (max-width: 860px){ .grid.two { grid-template-columns: 1fr; } }
+
+  label { display:block; font-size: 12px; text-transform: uppercase; letter-spacing:.12em; color: var(--muted); margin-bottom: 8px; }
+  textarea, input[type="text"], input[type="password"] {
+    width: 100%;
+    background: rgba(7,11,20,.7);
+    border: 1px solid var(--stroke);
+    border-radius: 12px;
+    color: var(--text);
+    padding: 12px 14px;
+    font-family: var(--font);
+    font-size: 14px;
+    resize: vertical;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  textarea:focus, input[type="text"]:focus, input[type="password"]:focus {
+    border-color: rgba(91,140,255,.6);
+    box-shadow: 0 0 0 3px rgba(91,140,255,.15);
+  }
+  textarea::placeholder, input::placeholder { color: #5a6a8c; }
+
+  .hint { font-size: 12px; color: var(--muted); margin-top: 8px; line-height:1.5; }
+
+  .row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  button {
+    appearance: none;
+    border: none;
+    cursor: pointer;
+    border-radius: 12px;
+    padding: 12px 20px;
+    font-family: var(--font);
+    font-weight: 600;
+    font-size: 14px;
+    transition: transform .08s, box-shadow .2s, background .2s;
+  }
+  button:active { transform: translateY(1px); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    box-shadow: 0 10px 30px rgba(91,140,255,.35);
+    flex: 1;
+  }
+  .btn-primary:hover { box-shadow: 0 12px 36px rgba(91,140,255,.5); }
+  .btn-ghost {
+    background: var(--panel-solid);
+    border: 1px solid var(--stroke);
+    color: var(--text);
+  }
+  .btn-ghost:hover { border-color: rgba(91,140,255,.5); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* Action chips */
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .chip {
+    font-size: 12px; padding: 6px 12px; border-radius: 999px;
+    background: var(--panel-solid); border: 1px solid var(--stroke);
+    color: var(--muted); cursor: pointer; transition: all .15s;
+  }
+  .chip:hover, .chip.active { color: var(--text); border-color: var(--accent); background: rgba(91,140,255,.12); }
+
+  /* Result area */
+  .result-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+  .result-head h3 { margin:0; font-size:16px; }
+  .badge { font-size:12px; padding:4px 10px; border-radius:999px; background:rgba(34,211,238,.12); color:var(--accent3); border:1px solid rgba(34,211,238,.25); }
+  .badge.ok { background:rgba(52,211,153,.12); color:var(--ok); border-color:rgba(52,211,153,.25); }
+  .badge.err { background:rgba(248,113,113,.12); color:var(--err); border-color:rgba(248,113,113,.25); }
+  .meta { font-size:12px; color:var(--muted); }
+
+  #result { white-space: pre-wrap; word-break: break-word; font-size:13px; line-height:1.65;
+    background: rgba(7,11,20,.7); border:1px solid var(--stroke); border-radius:12px; padding:16px;
+    max-height: 420px; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  #result .search-item { margin-bottom: 14px; font-family: var(--font); }
+  #result .search-item a { color: var(--accent3); text-decoration: none; font-weight:600; }
+  #result .search-item p { margin:4px 0 0; color:var(--muted); }
+
+  /* Logs */
+  .log-item { font-size:12px; color:var(--muted); padding:4px 0; border-bottom:1px dashed rgba(120,160,255,.08); }
+  .log-item .t { color: var(--accent3); margin-right:6px; }
+
+  .foot { margin-top: 28px; text-align:center; color:#5a6a8c; font-size:12px; }
+</style>
+</head>
+<body>
+  <div class="aurora"></div>
+  <div class="grain"></div>
+
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo">H</div>
+        <div>
+          <h1>Hoolulu Firewall</h1>
+          <p>Firecrawl Bot · wired into the Hoolulu AgentFactory</p>
+        </div>
+      </div>
+      <div class="status-pill">
+        <span id="dot" class="dot"></span>
+        <span id="statusText">Checking…</span>
+      </div>
+    </header>
+
+    <div class="hero">
+      <h2>Clone any sites into one. Build anything. No limits.</h2>
+      <p>Paste one or more site URLs (or a topic) and the Firecrawl bot crawls the web, pulls clean content, and stitches it into a single unified document — all through your Hoolulu factory.</p>
+    </div>
+
+    <!-- Connect card: the only thing anyone needs to do is paste a key -->
+    <div class="card connect" style="margin-bottom:18px;">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:240px;">
+          <label for="keyInput" style="margin-bottom:6px;">1️⃣ Paste your Firecrawl API key</label>
+          <input type="password" id="keyInput" placeholder="fc-xxxxxxxxxxxxxxxx" autocomplete="off" />
+          <p class="hint" style="margin-top:6px;">Get one free at <b>firecrawl.dev</b> → Dashboard → API keys. It's saved so you only paste it once.</p>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-end;">
+          <button id="connectBtn" class="btn-primary" style="flex:0 0 auto;">🔌 Connect</button>
+          <button id="disconnectBtn" class="btn-ghost" style="display:none;">Disconnect</button>
+        </div>
+      </div>
+      <div id="connectMsg" class="hint" style="margin:10px 0 0;font-weight:600;"></div>
+    </div>
+
+    <div class="grid two">
+      <div class="card">
+        <label for="input">Sites or prompt</label>
+        <textarea id="input" rows="4" placeholder="https://example.com/pricing&#10;https://anothersite.com/blog&#10;&#10;or just type a topic: &#34;latest AI agent frameworks&#34;"></textarea>
+        <div class="chips" id="chips">
+          <span class="chip active" data-action="build">🔄 Clone into one</span>
+          <span class="chip" data-action="scrape">📄 Scrape page</span>
+          <span class="chip" data-action="search">🔎 Search web</span>
+          <span class="chip" data-action="map">🗺️ Map site</span>
+        </div>
+        <div class="row">
+          <button id="go" class="btn-primary">Run Firecrawl Bot</button>
+          <button id="clear" class="btn-ghost">Clear</button>
+        </div>
+        <p class="hint">💡 The bot can also scrape/map/search each URL you paste. Add a name in <b>Options</b> below for the combined clone.</p>
+      </div>
+
+      <div class="card">
+        <label for="options">Options</label>
+        <input type="text" id="name" placeholder="Combined clone title (optional)" />
+        <label style="margin-top:14px;">Factory registry</label>
+        <div id="agents" style="font-size:12px;color:var(--muted);line-height:1.7;"></div>
+        <label style="margin-top:14px;">Bot activity log</label>
+        <div id="logs" style="max-height:180px;overflow:auto;"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <div class="result-head">
+        <h3>Output</h3>
+        <div id="resultBadge"></div>
+      </div>
+      <div id="meta" class="meta" style="margin-bottom:10px;"></div>
+      <div id="result">Run a task to see Firecrawl output here.</div>
+    </div>
+
+    <div class="foot">Hoolulu Systems Hub · Firecrawl Bot · built to build, without limits</div>
+  </div>
+
+<script>
+  const $ = (s) => document.querySelector(s);
+  const input = $("#input"), go = $("#go"), clear = $("#clear");
+  const result = $("#result"), resultBadge = $("#resultBadge"), meta = $("#meta");
+  const nameField = $("#name"), statusText = $("#statusText"), dot = $("#dot");
+  let currentAction = "build";
+
+  document.querySelectorAll(".chip").forEach((c) => {
+    c.addEventListener("click", () => {
+      document.querySelectorAll(".chip").forEach(x => x.classList.remove("active"));
+      c.classList.add("active");
+      currentAction = c.dataset.action;
+    });
+  });
+
+  clear.addEventListener("click", () => { input.value = ""; result.textContent = "Cleared."; meta.textContent = ""; resultBadge.innerHTML = ""; });
+
+  async function api(path, body) {
+    const res = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return res.json();
+  }
+
+  function parseUrls(text) {
+    return (text.match(/https?:\/\/[^\s]+/g) || []).filter(Boolean);
+  }
+
+  go.addEventListener("click", async () => {
+    const text = input.value.trim();
+    if (!text) { result.textContent = "⚠️ Paste a URL or a topic first."; return; }
+    const urls = parseUrls(text);
+
+    go.disabled = true;
+    go.textContent = "Crawling…";
+    resultBadge.innerHTML = '<span class="badge">working…</span>';
+
+    let payload;
+    if (currentAction === "build") {
+      payload = { action: "build", urls, prompt: urls.length ? undefined : text, name: nameField.value || undefined };
+    } else if (currentAction === "scrape") {
+      payload = { action: "scrape", url: urls[0] || text };
+    } else if (currentAction === "search") {
+      payload = { action: "search", query: urls.length ? text.replace(/\s+/g," ").trim() : text };
+    } else if (currentAction === "map") {
+      payload = { action: "map", url: urls[0] || text };
+    }
+
+    const data = await api("/api/bot/run", payload);
+    go.disabled = false;
+    go.textContent = "Run Firecrawl Bot";
+
+    render(data);
+    loadLogs();
+  });
+
+  function render(data) {
+    meta.textContent = data.ok
+      ? `✓ ${data.action} · ${(data.elapsedMs/1000).toFixed(1)}s · bot ${data.bot?.id}`
+      : `✗ ${data.action} failed`;
+
+    resultBadge.innerHTML = data.ok
+      ? '<span class="badge ok">success</span>'
+      : '<span class="badge err">error</span>';
+
+    if (!data.ok) { result.textContent = "Error: " + data.error; return; }
+
+    if (data.action === "search") {
+      result.innerHTML = data.results.map(r =>
+        `<div class="search-item"><a href="${r.url}" target="_blank" rel="noopener">${r.title || r.url}</a><p>${r.description || ""}</p></div>`
+      ).join("") || "No results.";
+    } else if (data.action === "map") {
+      result.textContent = data.links.join("\n");
+    } else if (data.type === "clone" || data.action === "build") {
+      result.textContent = `# Combined from ${data.sourceCount} source(s):\n` + data.sources.map(s => "• " + s).join("\n") + "\n\n" + data.combined;
+    } else {
+      result.textContent = data.markdown || JSON.stringify(data, null, 2);
+    }
+  }
+
+  async function loadAgents() {
+    const res = await fetch("/api/agents");
+    const agents = await res.json();
+    $("#agents").innerHTML = agents.length
+      ? agents.map(a => `▸ ${a.name} <span style="color:var(--muted)">(${a.capabilities.slice(0,3).join(", ")})</span>`).join("<br>")
+      : "No agents registered yet.";
+  }
+
+  async function loadLogs() {
+    const res = await fetch("/api/status");
+    const s = await res.json();
+    const logs = s.bot?.logEntries ? [`<div class="log-item"><span class="t">•</span>${s.bot.lastLog.msg}</div>`] : [];
+    $("#logs").innerHTML = logs.join("") || "<div class='log-item'>No activity yet.</div>";
+  }
+
+  // ---- Connect / disconnect ----
+  const keyInput = $("#keyInput"), connectBtn = $("#connectBtn");
+  const disconnectBtn = $("#disconnectBtn"), connectMsg = $("#connectMsg");
+
+  connectBtn.addEventListener("click", async () => {
+    const key = keyInput.value.trim();
+    if (!key) { connectMsg.textContent = "⚠️ Paste your API key first."; return; }
+    connectBtn.disabled = true; connectMsg.textContent = "Connecting…";
+    const res = await fetch("/api/connect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ apiKey: key }),
+    });
+    const data = await res.json();
+    connectBtn.disabled = false;
+    connectMsg.style.color = data.ok ? "var(--ok)" : "var(--err)";
+    connectMsg.textContent = data.ok ? "✅ " + data.message : "❌ " + data.error;
+    if (data.ok) { keyInput.value = ""; setOnline(true); loadAgents(); loadLogs(); }
+  });
+
+  disconnectBtn.addEventListener("click", async () => {
+    await fetch("/api/disconnect", { method: "POST" });
+    connectMsg.textContent = "Disconnected.";
+    setOnline(false);
+  });
+
+  function setOnline(online) {
+    dot.classList.toggle("off", !online);
+    statusText.textContent = online ? "Bot online" : "Bot offline — paste a key above";
+    disconnectBtn.style.display = online ? "inline-block" : "none";
+    connectMsg.style.color = online ? "var(--ok)" : "var(--muted)";
+  }
+
+  async function loadStatus() {
+    const res = await fetch("/api/status");
+    const s = await res.json();
+    const online = s.bot?.online;
+    setOnline(online);
+    if (!online && connectMsg.textContent === "") {
+      connectMsg.style.color = "var(--muted)";
+      connectMsg.textContent = "Enter your key above and press Connect to go live.";
+    }
+  }
+
+  loadStatus(); loadAgents(); loadLogs();
+  setInterval(loadStatus, 8000);
+</script>
+</body>
+</html>
